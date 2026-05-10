@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	udp, err := net.ResolveUDPAddr("udp", ":42069")
+	addr := "localhost:42069"
+	udp, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -19,6 +20,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer udpConnection.Close()
+
+	fmt.Printf("Sending message to %s. Enter Ctrl+C to exit", addr)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -32,7 +35,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		fmt.Printf("Message sent: %s\n", input)
 	}
 
 }

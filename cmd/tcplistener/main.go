@@ -21,19 +21,19 @@ func main() {
 		if err != nil {
 			fmt.Errorf("error: tcp connection failed: %s", err.Error())
 		}
-		fmt.Println("TCP Connection accepted.")
+		fmt.Printf("TCP Connection accepted from %s.\n", conn.RemoteAddr())
 		stream := getLinesChannel(conn)
 
-		data := <-stream
-		fmt.Println(data)
-		fmt.Println("TCP Connection closed.")
+		for line := range stream {
+			fmt.Println(line)
+		}
+		fmt.Printf("TCP Connection closed from %s.\n", conn.RemoteAddr())
 	}
 
 }
 
 func getLinesChannel(f io.ReadCloser) <-chan string {
 
-	buffer := make([]byte, 8)
 	strChannel := make(chan string)
 
 	go func() {
@@ -41,6 +41,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 		defer close(strChannel)
 		line := ""
 		for {
+			buffer := make([]byte, 8)
 			n, err := f.Read(buffer)
 			if n > 0 {
 				// process bytes
