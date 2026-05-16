@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"strings"
+
+	"github.com/gcancel/http_package/internal/request"
 )
 
 func main() {
@@ -23,11 +25,19 @@ func main() {
 			fmt.Errorf("error: tcp connection failed: %s", err.Error())
 		}
 		fmt.Printf("TCP Connection accepted from %s.\n", conn.RemoteAddr())
-		stream := getLinesChannel(conn)
 
-		for line := range stream {
-			fmt.Println(line)
+		//stream := getLinesChannel(conn)
+
+		req, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		fmt.Println("Request line:")
+		fmt.Printf("- Method: %s\n", req.RequestLine.Method)
+		fmt.Printf("- Target: %s\n", req.RequestLine.RequestTarget)
+		fmt.Printf("- Version: %s\n", req.RequestLine.HttpVersion)
+
 		fmt.Printf("TCP Connection closed from %s.\n", conn.RemoteAddr())
 	}
 
