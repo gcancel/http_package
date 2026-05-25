@@ -9,12 +9,10 @@ import (
 type Headers map[string]string
 
 func NewHeaders() Headers {
-	return make(Headers)
+	return map[string]string{}
 }
 
-const (
-	crlf = "\r\n"
-)
+const crlf = "\r\n"
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, []byte(crlf))
@@ -23,29 +21,22 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, done, nil
 	}
 	if idx == 0 {
-		done = true
-		return n, done, nil
+		return 2, true, nil
 	}
 
-	// turning data into string, splitting it on the space and then trimming the remaining
-	headersString := string(data)
-	headerLine := strings.Split(headersString, " ")
-	if len(headerLine) != 2 {
-		done = false
-		return 0, done, fmt.Errorf("error: Invalid HTTP field line: %#v", headerLine)
+	headerParts := bytes.SplitN(data[:idx], []byte(":"), 2)
+	if len(headerParts) != 2 {
+		return 0, false, fmt.Errorf("error: Invalid HTTP field line: %#v", string(headerParts[0]))
 	}
 
-	for _, str := range headerLine {
-		str = strings.TrimSpace(str)
+	key := string(headerParts[0])
+	if key != strings.TrimSpace(key) {
+		return 0, false, fmt.Errorf("error: Invalid header line %s", key)
 	}
+	key = strings.TrimSpace(key)
+	value := bytes.TrimSpace(headerParts[1])
 
-	key := headerLine[0]
-	key = strings.TrimRight(key, ":")
-	value := headerLine[1]
-	value = strings.Trim(value, "\r\n")
+	h[key] = string(value)
 
-	h[key] = value
-	done = false
-
-	return idx + 2, done, nil
+	return idx + 2, false, nil
 }
