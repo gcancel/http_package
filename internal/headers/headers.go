@@ -34,6 +34,15 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("error: Invalid header line %s", key)
 	}
 	key = strings.TrimSpace(key)
+
+	// checking for invalid characters in the field name
+	for _, c := range key {
+		if !isAlphaNumeric(c) {
+			return 0, false, fmt.Errorf("error: Invalid field name characters. %v | %s", c, key)
+		}
+	}
+
+	key = strings.ToLower(key)
 	value := bytes.TrimSpace(headerParts[1])
 
 	h.Set(key, string(value))
@@ -43,4 +52,11 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 func (h Headers) Set(key, value string) {
 	h[key] = value
+}
+
+func isAlphaNumeric(c rune) bool {
+	if (c >= 'A' && c <= 'z') || (c >= '0' && c <= '9') {
+		return true
+	}
+	return false
 }
