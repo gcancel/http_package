@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/gcancel/http_package/internal/headers"
 )
 
 type Request struct {
 	RequestLine RequestLine
+	Headers     headers.Headers
 	State       RequestState
 }
 
@@ -24,6 +27,7 @@ type RequestState int
 const (
 	Request_Initialized RequestState = iota
 	Request_Done
+	Request_Parsing_Headers
 )
 const bufferSize = 8
 
