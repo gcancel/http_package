@@ -62,3 +62,7 @@ func (h Headers) Set(key, value string) {
 func isAlphaNumeric(c rune) bool {
 	return (c >= 'A' && c <= 'z') || (c >= '0' && c <= '9')
 }
+
+func parseHeaderLine(data []byte) (int error) {
+
+}

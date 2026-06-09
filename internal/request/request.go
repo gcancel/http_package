@@ -114,9 +114,24 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 
 		r.RequestLine = *req
-		r.State = Request_Done
+		r.State = Request_Parsing_Headers
 
 		return bytesParsed, nil
+
+	case Request_Parsing_Headers:
+		// TODO: This is broken and needs to be fixed! move this logic to the .parse method for the header
+		totalBytesParsed := 0
+		for r.State != Request_Done {
+			n, err := r.parse(data[totalBytesParsed:])
+			if err != nil {
+				return 0, fmt.Errorf("Error parsing headers: %s", err)
+			}
+			totalBytesParsed += n
+		}
+
+		r.State = Request_Done
+		return totalBytesParsed, nil
+
 	case Request_Done:
 		return 0, fmt.Errorf("error trying to read data in a done state.")
 	default:
