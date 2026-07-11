@@ -35,7 +35,8 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	buffer := make([]byte, bufferSize)
 	request := Request{
-		State: Request_Initialized,
+		State:   Request_Initialized,
+		Headers: headers.NewHeaders(),
 	}
 
 	readToIndex := 0
@@ -51,6 +52,9 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		bytesRead, err := reader.Read(buffer[readToIndex:])
 
 		if errors.Is(err, io.EOF) {
+			if request.State != Request_Done {
+				return nil, fmt.Errorf("incomplete request: %s", err)
+			}
 			request.State = Request_Done
 			break
 		}
@@ -66,7 +70,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			return nil, fmt.Errorf("error parsing bytes: %s Total bytes read: %d Buffer: %d", err, bytesRead, buffer)
 		}
 		fmt.Println(string(buffer[:bytesParsed]))
-		copy(buffer, buffer[:bytesParsed])
+		copy(buffer, buffer[bytesParsed:])
 		readToIndex -= bytesParsed
 
 	}
@@ -102,7 +106,21 @@ func parseRequestLine(lines []byte) (int, *RequestLine, error) {
 }
 
 func (r *Request) parse(data []byte) (int, error) {
+	totalByteParsed := 0
+	for r.State != Request_Done {
+		n, err := r.parseSingle(data[totalByteParsed:])
+		if err != nil {
+			return 0, err
+		}
+		totalByteParsed += n
+		if n == 0 {
+			break
+		}
+	}
+	return totalByteParsed, nil
+}
 
+func (r *Request) parseSingle(data []byte) (int, error) {
 	switch r.State {
 	case Request_Initialized:
 		bytesParsed, req, err := parseRequestLine(data)
@@ -119,23 +137,19 @@ func (r *Request) parse(data []byte) (int, error) {
 		return bytesParsed, nil
 
 	case Request_Parsing_Headers:
-		// TODO: This is broken and needs to be fixed! move this logic to the .parse method for the header
-		totalBytesParsed := 0
-		for r.State != Request_Done {
-			n, err := r.parse(data[totalBytesParsed:])
-			if err != nil {
-				return 0, fmt.Errorf("Error parsing headers: %s", err)
-			}
-			totalBytesParsed += n
+		n, done, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, fmt.Errorf("Error parsing headers: %s", err)
+		}
+		if done {
+			r.State = Request_Done
 		}
 
-		r.State = Request_Done
-		return totalBytesParsed, nil
+		return n, nil
 
 	case Request_Done:
 		return 0, fmt.Errorf("error trying to read data in a done state.")
 	default:
 		return 0, fmt.Errorf("error: unknown RequestState.")
 	}
-
 }
